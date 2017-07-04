@@ -1,8 +1,7 @@
 package com.example.lantimat.kamaztestapp;
 
+import android.content.Context;
 import android.support.design.widget.TabLayout;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
@@ -19,16 +18,15 @@ import android.view.ViewGroup;
 
 import android.widget.TextView;
 
-import com.google.android.gms.maps.SupportMapFragment;
-
-import java.util.Map;
-
 public class MainActivity extends AppCompatActivity {
 
-    private SectionsPagerAdapter mSectionsPagerAdapter;
 
-
-    private ViewPager mViewPager;
+    private ViewPager viewPager;
+    private PagerAdapter pagerAdapter;
+    EnterLatLngFragment addLatFragment;
+    MapFragment mapFragment;
+    float lat;
+    float longt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,25 +35,21 @@ public class MainActivity extends AppCompatActivity {
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // Create the adapter that will return a fragment for each of the three
-        // primary sections of the activity.
-        mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
-        // Set up the ViewPager with the sections adapter.
-        mViewPager = (ViewPager) findViewById(R.id.container);
-        mViewPager.setAdapter(mSectionsPagerAdapter);
+        // Get the ViewPager and set it's PagerAdapter so that it can display items
+        viewPager = (ViewPager) findViewById(R.id.viewpager);
+        pagerAdapter = new PagerAdapter(getSupportFragmentManager(), MainActivity.this);
+        viewPager.setAdapter(pagerAdapter);
 
-        TabLayout tabLayout = (TabLayout) findViewById(R.id.tabs);
-        tabLayout.setupWithViewPager(mViewPager);
+        // Give the TabLayout the ViewPager
+        TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_layout);
+        tabLayout.setupWithViewPager(viewPager);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        // Iterate over all tabs and set the custom view
+        for (int i = 0; i < tabLayout.getTabCount(); i++) {
+            TabLayout.Tab tab = tabLayout.getTabAt(i);
+            tab.setCustomView(pagerAdapter.getTabView(i));
+        }
 
     }
 
@@ -82,45 +76,68 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    class PagerAdapter extends FragmentPagerAdapter {
 
+        String tabTitles[] = new String[] { "Координаты", "Карта"};
+        public Fragment[] fragments = new Fragment[tabTitles.length];
+        Context context;
 
-    public class SectionsPagerAdapter extends FragmentPagerAdapter {
-
-        public SectionsPagerAdapter(FragmentManager fm) {
+        public PagerAdapter(FragmentManager fm, Context context) {
             super(fm);
-        }
-
-        @Override
-        public Fragment getItem(int position) {
-            // getItem is called to instantiate the fragment for the given page.
-            // Return a PlaceholderFragment (defined as a static inner class below).
-            //return MapFragment.newInstance(position + 1);
-            switch (position) {
-                case 0:
-                    return AddLatitudeFragment.newInstance();
-                case 1:
-                    return MapFragment.newInstance(1);
-            }
-            return null;
+            this.context = context;
         }
 
         @Override
         public int getCount() {
-            // Show 2 total pages.
-            return 2;
+            return tabTitles.length;
+        }
+
+        @Override
+        public Fragment getItem(int position) {
+
+            switch (position) {
+                case 0:
+                    return new EnterLatLngFragment();
+                case 1:
+                    return new MapFragment();
+            }
+
+            return null;
         }
 
         @Override
         public CharSequence getPageTitle(int position) {
-            switch (position) {
-                case 0:
-                    return "SECTION 1";
-                case 1:
-                    return "SECTION 2";
-                case 2:
-                    return "SECTION 3";
+            // Generate title based on item position
+            return tabTitles[position];
+        }
+
+        public View getTabView(int position) {
+            View tab = LayoutInflater.from(MainActivity.this).inflate(R.layout.custom_tabs, null);
+            TextView tv = (TextView) tab.findViewById(R.id.custom_text);
+            tv.setText(tabTitles[position]);
+            return tab;
+        }
+
+        //This populates your Fragment reference array:
+        @Override
+        public Object instantiateItem(ViewGroup container, int position) {
+            Fragment createdFragment = (Fragment) super.instantiateItem(container, position);
+            fragments[position]  = createdFragment;
+            return createdFragment;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        if (requestCode == MapFragment.MY_PERMISSIONS_REQUEST_LOCATION){
+            MapFragment mapFragment = (MapFragment) pagerAdapter.fragments[1];
+            if (mapFragment != null) {
+                mapFragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
             }
-            return null;
+        }
+        else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 }
